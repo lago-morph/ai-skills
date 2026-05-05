@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "agent-dispatch-loop state",
+  "description": "Persisted state for one run of the agent-dispatch-loop skill.",
+  "type": "object",
+  "required": ["run_id", "goal", "min_loops", "max_loops", "stop_condition",
+               "test_command", "coverage_command", "feature_branch",
+               "current_loop", "exit_reason", "iterations"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "Unique run identifier (YYYYMMDD-HHMMSS).",
+      "pattern": "^[0-9]{8}-[0-9]{6}$"
+    },
+    "goal": {
+      "type": "string",
+      "description": "The goal string provided by the user."
+    },
+    "spec_path": {
+      "type": ["string", "null"],
+      "description": "Path to a SPEC.md file, or null if none provided."
+    },
+    "min_loops": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Minimum number of full iterations to run."
+    },
+    "max_loops": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Hard cap on iterations."
+    },
+    "stop_condition": {
+      "type": "string",
+      "description": "Exit condition: 'all_tests_pass', 'coverage>N', or 'manual'.",
+      "examples": ["all_tests_pass", "coverage>80", "manual"]
+    },
+    "test_command": {
+      "type": "string",
+      "description": "Command to run the test suite (e.g. 'pytest -v')."
+    },
+    "coverage_command": {
+      "type": "string",
+      "description": "Command to collect coverage (e.g. 'pytest --cov --cov-report=term')."
+    },
+    "feature_branch": {
+      "type": "string",
+      "description": "Git branch where all impl and test work is committed."
+    },
+    "current_loop": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The loop number currently in progress (0 = not started)."
+    },
+    "exit_reason": {
+      "type": ["string", "null"],
+      "description": "Why the loop exited, or null if still running.",
+      "examples": ["stop_condition: all_tests_pass", "max_loops reached", null]
+    },
+    "iterations": {
+      "type": "array",
+      "description": "One entry per completed or in-progress iteration.",
+      "items": {
+        "type": "object",
+        "required": ["loop"],
+        "properties": {
+          "loop": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Iteration number (1-based)."
+          },
+          "impl_pr": {
+            "type": ["integer", "null"],
+            "description": "GitHub PR number for the implementation PR."
+          },
+          "impl_review": {
+            "type": ["string", "null"],
+            "enum": ["APPROVE", "REQUEST CHANGES", null],
+            "description": "Final verdict from step 2."
+          },
+          "test_pr": {
+            "type": ["integer", "null"],
+            "description": "GitHub PR number for the test PR."
+          },
+          "test_review": {
+            "type": ["string", "null"],
+            "enum": ["APPROVE", "REQUEST CHANGES", null],
+            "description": "Final verdict from step 4."
+          },
+          "tests_passed": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "tests_failed": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "tests_errored": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "tests_skipped": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "coverage": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Overall coverage percentage (0–100)."
+          },
+          "verdict": {
+            "type": ["string", "null"],
+            "enum": ["ALL_PASS", "SOME_FAILED", "SETUP_BROKEN", null],
+            "description": "Test run verdict from step 5."
+          },
+          "log_path": {
+            "type": ["string", "null"],
+            "description": "Absolute path to the test log captured in step 5."
+          },
+          "failure_analysis": {
+            "type": ["string", "null"],
+            "description": "Full text output from the step 6 analysis subagent, or null if all tests passed."
+          }
+        }
+      }
+    }
+  }
+}
