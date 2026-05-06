@@ -1,3 +1,8 @@
+---
+name: self-retrospective
+description: Harvest the knowledge accumulated in a session before it's lost to context truncation. Produce a structured retrospective covering what happened, which skills are worth extracting, and which repo conventions belong in AGENTS.md. Use when the user says "do a retrospective", "what did we learn?", "what skills could we extract?", "lessons learned?", or "anything to add to AGENTS.md?", or proactively when a session spanned multiple distinct phases, surfaced unexpected real-world findings, used many subagents, ran long, or the user signals session-wrap ("we're done", "good work", "let's stop here").
+---
+
 # Skill: self-retrospective
 
 Harvest the knowledge accumulated in a session before it's lost to context
