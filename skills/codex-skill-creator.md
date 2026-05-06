@@ -1,0 +1,24 @@
+# codex-skill-creator review report
+
+## Summary
+
+Reviewed `skills/codex-skill-creator/` against the upstream Anthropic skill-creator standards (frontmatter conventions, file layout, link integrity, naming, and progressive-disclosure structure). The skill was already in good shape: the quick validator passes, the YAML frontmatter has the required `name` and `description` fields, every internal cross-reference resolves to an existing file, and `agents/openai.yaml` matches the constraints documented in `references/openai_yaml.md`. Only a small number of trivial lint-level fixes were needed in two scripts; the substantive content of the skill was left untouched.
+
+## Changes made
+
+- `skills/codex-skill-creator/scripts/quick_validate.py`: Removed unused `import os`; reordered imports into PEP 8 stdlib/third-party groups; stripped trailing whitespace on the indented blank line at line 100. Cosmetic only — no behavior change. Validator still reports "Skill is valid!".
+- `skills/codex-skill-creator/scripts/utils.py`: Collapsed a triple blank line between the `from pathlib import Path` import and the first function definition to a single blank line, matching PEP 8's "two blank lines between top-level defs" convention. No behavior change.
+
+## Proposed future changes
+
+These are non-mechanical changes a follow-up author may want to make. They are not applied here because they would alter the skill's guidance, structure, or content.
+
+- Tighten the SKILL.md `description` (currently 339 characters and somewhat list-like). Upstream guidance recommends a "pushy" but compact description that emphasizes both what the skill does and concrete user-phrase triggers; consider rewriting to lead with the strongest trigger phrases ("creating, evaluating, or packaging a Codex skill") and trimming the secondary clauses.
+- Normalize SKILL.md heading capitalization to sentence case ("Communicating with the user", "Creating a skill", "Improving a skill", "Trigger description optimization"). Current headings capitalize articles/prepositions ("With", "The", "A", "And"), which deviates from upstream skill-creator's sentence-case style and from typical English title-case conventions. This is a stylistic refresh rather than a strict mechanical rename.
+- Resolve the redundancy between `metadata.short-description` in the SKILL.md frontmatter (kebab-case) and `interface.short_description` in `agents/openai.yaml` (snake_case). Either drop the frontmatter `metadata` block entirely (the upstream Anthropic skill-creator does not use it) or document why both exist.
+- Document or remove `assets/eval_review.html`. The Trigger Description Optimization section in SKILL.md only references `run_loop.py` / `run_eval.py` / `improve_description.py` and never tells the agent to open `eval_review.html`. The asset is inherited from upstream but appears orphaned in the Codex-flavored workflow; either wire it into the workflow with a "Step: review eval set with the user" pointer or drop it.
+- Decide what to do with the `scripts/run_eval.py`, `scripts/improve_description.py`, and `scripts/run_loop.py` "Codex-oriented stubs". SKILL.md flags them as stubs and tells users to confirm the environment supports the needed model invocation path. Either complete them so they actually call Codex, or excise the section and the scripts together. Leaving partial/unsupported scripts in place erodes trust in the rest of the package.
+- Consider tightening `scripts/init_skill.py`'s embedded `SKILL_TEMPLATE`. The template's "Structuring This Skill" and "Resources (optional)" sections weigh in around 70 lines of guidance that the new skill author is expected to delete. A leaner template (matching upstream's style of "shorter, then expand if needed") would let new skills reach a usable state faster.
+- Add an `evals/` directory with one or two genuinely runnable example evals so the "Test Cases" / "Running Evaluations In Codex" sections have a concrete starting point. Upstream's skill-creator similarly omits one, but for a skill whose entire value proposition is helping users build evals, shipping a worked example would make the workflow self-demonstrating.
+- Replace lingering Anthropic-Claude-specific phrasing with Codex equivalents. Many sections (e.g., "subagents", "Cowork", "Claude.ai") were collapsed cleanly during the merge, but a careful pass for any remaining `claude` / `Anthropic` references in body prose would tighten the Codex framing. (The README's provenance note can stay.)
+- Replace the f-strings without placeholders flagged by lint (`generate_openai_yaml.py:186`, `aggregate_benchmark.py:392`, `run_loop.py:190`, etc.) with plain strings. Trivial, but I left them alone here because they slightly straddle the "mechanical vs. behavior" line in a `print(...)` context and were better grouped into a future cleanup pass.
