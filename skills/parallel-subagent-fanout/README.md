@@ -105,7 +105,7 @@ This skill automates:
 ```
 skills/parallel-subagent-fanout/
 ├── README.md            ← this file
-├── skill.md             ← dispatcher instructions (the executable skill)
+├── SKILL.md             ← dispatcher instructions (the executable skill)
 └── spec/
     ├── README.md        ← original overview from the spec repo
     └── SPEC.md          ← full implementation spec
