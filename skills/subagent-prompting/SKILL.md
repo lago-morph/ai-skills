@@ -1,3 +1,8 @@
+---
+name: subagent-prompting
+description: Reference card and brief generator for subagent dispatch. Use whenever you're about to call the Agent tool or write a subagent brief, especially for multiple subagents, long-running subagents (>5 minutes), or high-stakes work where rework is expensive. Provides a 9-section brief template, subagent type selection, parallel vs serial dispatch rules, foreground vs background guidance, recovery patterns, and anti-patterns.
+---
+
 # Skill: subagent-prompting
 
 Reference card and brief generator for subagent dispatch. Use this skill
