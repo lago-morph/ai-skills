@@ -1,3 +1,8 @@
+---
+name: parallel-subagent-fanout
+description: Orchestrate a parallel multi-agent workflow that decomposes a goal into independent subtasks, dispatches them concurrently to subagents on separate sub-branches, merges results in plan order, and delivers one PR with an embedded run report. Use this skill whenever the user asks to fan out work across multiple agents, implement N independent endpoints/modules/features in parallel, run multiple subagents at once, or do several independent things and produce one combined output, even if they don't explicitly say "fanout".
+---
+
 # Skill: parallel-subagent-fanout
 
 Orchestrate a parallel multi-agent workflow: decompose a goal into independent
