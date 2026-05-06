@@ -111,7 +111,7 @@ or >3 architectural layers, break it into multiple sequential dispatches.
 ```
 skills/subagent-prompting/
 ├── README.md                          ← this file
-├── skill.md                           ← reference card + brief generator (the executable skill)
+├── SKILL.md                           ← reference card + brief generator (the executable skill)
 ├── spec/
 │   ├── README.md                      ← original overview from the spec repo
 │   └── SPEC.md                        ← full implementation spec

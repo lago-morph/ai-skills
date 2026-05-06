@@ -37,4 +37,3 @@ Spec only — see `SPEC.md`.
 - `parallel-subagent-fanout` — uses this skill's brief templates for each
   subtask's dispatch brief.
 - `agent-dispatch-loop` — uses this skill's templates for steps 1–6.
-
