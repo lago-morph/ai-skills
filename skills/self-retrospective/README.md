@@ -180,7 +180,7 @@ Walk the session systematically for these 8 categories of material:
 ```
 skills/self-retrospective/
 ├── README.md            ← this file
-├── skill.md             ← executable skill instructions
+├── SKILL.md             ← executable skill instructions
 └── spec/
     ├── README.md        ← original overview from the spec
     └── SPEC.md          ← full implementation spec
