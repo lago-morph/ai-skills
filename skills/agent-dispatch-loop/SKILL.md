@@ -1,3 +1,8 @@
+---
+name: agent-dispatch-loop
+description: Run an iterated 7-step build loop over a codebase, dispatching each step to a focused subagent. The dispatcher owns the loop, state, and exit decision; subagents own the work. Use when the user says "build X iteratively", "loop until done", "run the implement-test-review cycle on this", "iterate on this until tests pass", or "run a full SDLC pass".
+---
+
 # Skill: agent-dispatch-loop
 
 Run an iterated 7-step build loop over a codebase, dispatching each step

@@ -96,7 +96,7 @@ Example iteration report table:
 ```
 skills/agent-dispatch-loop/
 ├── README.md            ← this file
-├── skill.md             ← dispatcher instructions (the executable skill)
+├── SKILL.md             ← dispatcher instructions (the executable skill)
 ├── state-schema.json    ← JSON Schema for loops/<run_id>/state.json
 └── spec/
     ├── README.md        ← original overview from the spec repo
