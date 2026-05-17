@@ -2,11 +2,54 @@
 
 ## Status: Pre-Implementation
 
+**Companion documents:**
+- `use-cases-spec.md` — the standard user workflows (UC1–UC6) referenced from decisions 14, 15 and the Features section. Reviewable independently from this spec.
+
 -----
 
 ## DECISIONS REQUIRED BEFORE IMPLEMENTATION BEGINS
 
 These must be resolved before writing any code. Claude Code should prompt the user for each of these before proceeding.
+
+> **Note:** Decision 0 below is *blocking* and dominates decisions 6, 7, 8, large parts of the Architecture and Technology Decisions sections, and the framing of the Phase 1 "Todo Directory Writer" feature. Resolve decision 0 first; the answers to 1–15 may shift depending on it.
+
+### 0. BLOCKING — Hosting Architecture (Electron desktop vs web app)
+
+A late-breaking requirement: the user wants to use the app **from an iPad** as well as from a computer, and explicitly does not want to build a native iPad app. The current spec assumes an Electron desktop app on Windows, which doesn't run on iPad. This decision must be made before the rest of the spec is meaningful.
+
+**Options:**
+
+**A. Keep Electron, ship a separate native iPad app later.** Two codebases, two release pipelines, plus the native iPad work the user said they want to avoid. Not recommended.
+
+**B. Pivot to a single-page web app hosted on GitHub Pages, with GitHub Actions as the work backend. *(RECOMMENDED)***
+- Browser-based SPA serves UI from GitHub Pages — runs on iPad Safari, desktop browsers, anywhere
+- All persistent state lives in the canonical GitHub repo (manifests, libraries, proposal queue, lineage, provenance)
+- Octokit calls GitHub directly from the browser (GitHub API supports CORS for authenticated requests)
+- GitHub auth: OAuth Device Flow (iPad-friendly) or a fine-grained PAT pasted by the user; token stored in browser IndexedDB, ideally encrypted with a passphrase-derived key
+- **LLM work happens inside GitHub Actions, not in the browser.** When the SPA needs Claude (drift summary, retrospective harvest, ADR enrichment, reconciliation), it writes a structured task file to the canonical repo and commits it. A workflow triggered on changes under `tasks/` runs the Claude Code Action, completes the work, commits results, and updates task status or opens an issue per UC6
+- The Phase 1 "Todo Directory Writer" concept already in the spec maps naturally onto this task-file mechanism; the manual `claude -p` invocation is replaced by the Action
+- Action latency (~10–30s cold start) is acceptable for occasional reconciliation; bulk operations (e.g. nightly harvest) run as scheduled workflows
+- Browser learns about Action completion via polling the relevant API (issue comments, commits, workflow runs) or via a webhook-triggered Pages rebuild
+
+**C. SPA on GitHub Pages + a small hosted backend (Cloudflare Worker, Fly.io, etc.).** Lower latency than Actions, but adds hosting cost and ops burden. Not recommended unless Action latency proves unacceptable in practice.
+
+**Recommendation: Option B.**
+
+**If Option B is chosen, these spec sections need rewriting:**
+- ARCHITECTURE — components become SPA + GitHub Pages + GitHub Actions, not Electron + Node + CLI subprocess
+- TECHNOLOGY DECISIONS — Electron → SPA framework (suggested: React + Vite, smallest reasonable footprint with well-documented Pages deployment); add Pages and Actions config
+- Decision 6 (GitHub Auth) — PAT in `safeStorage` becomes OAuth Device Flow or PAT in IndexedDB
+- Decision 7 (Agent SDK June 15) — runs inside the Action, not in the app process
+- Decision 8 (Target platforms) — replaced by browser targets (iPad Safari, desktop Chrome/Firefox/Edge/Safari)
+- Phase 1 features — reframe Todo Directory Writer as Task File Writer + Workflow Runner
+- Phase 2 features — described as an Action upgrade (Agent SDK swapped in inside the workflow) rather than an in-process IPC replacement
+- KNOWN CONSTRAINTS — add: Action cold-start latency, Action runner 6h timeout, browser CORS limits for GitHub API, iPad Safari storage quirks (IndexedDB eviction under storage pressure, 7-day ITP cap on script-writable storage)
+
+**Open sub-questions even within Option B (decide alongside or shortly after):**
+- Claude auth inside Actions: Max-subscription OAuth token (`CLAUDE_CODE_OAUTH_TOKEN` as a repo secret) or a pay-as-you-go `ANTHROPIC_API_KEY`? Max OAuth is preferred if it works in the Claude Code Action without manual re-auth; API key is a clean fallback
+- SPA framework: React + Vite (recommended), Svelte + SvelteKit static export, or vanilla TS?
+- Token persistence in the browser: IndexedDB with passphrase-derived encryption key, or session-only with re-auth each session?
+- Action completion notification: poll workflow runs API, poll target issue/commit, or use a GitHub webhook → Pages rebuild trigger?
 
 ### 1. Skill Identity & Versioning
 
@@ -166,6 +209,21 @@ The user will continually recategorize and refactor library entries — splittin
 - **Lineage truth:** is the canonical source of lineage the per-entry frontmatter (decentralized, lives with the data, requires a scan to do reverse lookups), a separate `lineage.{json,yaml}` graph file (centralized, fast lookup, easy to drift), or both (frontmatter as truth, lineage file as derived cache)? Recommendation: per-entry frontmatter as truth + a derived cache rebuilt by the app
 - Confirm this design — ID format, tombstone placement, lineage truth, and whether the scheme applies uniformly across all three library types
 
+### 14. Sync Direction & Provenance
+
+- **Repo → canonical match logic** (UC5): when ingesting a skill / fragment / ADR from a tracked repo, how do we decide it matches an existing canonical entry? Proposal: content hash for fast exact-match, then Claude-assisted similarity check for near-matches (catches reformatted-but-equivalent entries). Confirm
+- **Provenance schema:** each entry tracks one or more provenance records of the form `{source_repo, source_path, ingested_at, ingested_by, content_hash_at_ingest}`. Stored as a list in the entry's frontmatter, or as a separate `provenance.{json,yaml}` file. Confirm placement
+- **Tag-vs-create semantics on ingest:** if an entry matches an existing canonical entry, the existing entry receives an additional provenance record (indicating it also lives in this repo) rather than creating a duplicate. If no match, a new entry is created with a fresh immutable ID. Confirm
+- **Bulk parallel sync** (UC4): max concurrency for parallel repo writes — proposal: 5 concurrent (respects GitHub's 5,000 req/hr rate limit with typical repo size and leaves headroom). Confirm
+- **Cross-repo skill drift detection:** when the same skill ID is provenanced in multiple repos and they have diverged, this surfaces as a multi-way reconciliation in UC6
+
+### 15. Reconciliation Output Channel
+
+- **Default output channel** for the guided reconciliation workflow (UC6): proposal is **a GitHub issue** opened against the canonical repo with a specific label (proposed: `reconciliation-pending`). A separate Claude Code session can then process the queue with `gh issue list --label reconciliation-pending`. Confirm the channel and the label name
+- **Fallback channel:** a file in a working directory (e.g. `proposals/reconciliations/<entry-id>-<timestamp>.md`) for cases where issue creation isn't appropriate
+- **Issue body format:** structured markdown with frontmatter capturing entry ID, versions compared, and the Claude-generated inventory of distinct ideas + recommendations. The format must be parseable by a downstream Claude Code session so it can pick up the conversation
+- **Conversation continuation:** when a separate Claude Code session works an issue, where does the resulting decision go — back into the issue as comments, into a PR against the canonical repo, or both?
+
 -----
 
 ## PROJECT OVERVIEW
@@ -285,6 +343,12 @@ The user will continually recategorize and refactor library entries — splittin
 - Each operation preserves the lineage trail by writing `predecessors` / `superseded_by` frontmatter per decision 13
 - Manifest resolution follows superseded links automatically so target repos always receive the current successor(s) without manual manifest edits — the UI also offers to rewrite manifests to point at the new IDs directly
 - Lineage visualization: per-entry "where did this come from / what did it become" view
+
+#### Sync Direction & Provenance Tools
+
+- Per-repo and bulk sync operations in both directions (canonical → repo and repo → canonical)
+- Provenance tracking for entries that originated in or also appear in tracked repos
+- "GitHub issue with label" output channel for reconciliation proposals, so a separate Claude Code session can pick the queue up by label and process it conversationally (see UC5 and UC6 below)
 
 ### Phase 2 — Agent SDK Integration (June 15, 2026)
 
