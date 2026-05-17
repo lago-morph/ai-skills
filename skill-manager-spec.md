@@ -5,7 +5,7 @@
 **Companion documents:**
 - `use-cases-spec.md` — the standard user workflows (UC1–UC7). Reviewable independently from this spec.
 
-> **Architecture summary:** the app is a single-page web app hosted on GitHub Pages (decision 0). It talks to the GitHub REST API directly from the browser and uses a dedicated GitHub repo as its database. It **never invokes Claude directly** — instead it creates GitHub issues with structured task descriptions, and the user tells their Claude session (Claude Code CLI, Claude.ai with GitHub MCP, Claude Desktop, etc.) to process them. Claude posts results as comments; the app polls for them. See decisions 0 and 16 for full detail.
+> **Architecture summary:** the app is a single-page web app hosted on GitHub Pages (decision 0). It talks to the GitHub REST API directly from the browser and uses a dedicated GitHub repo as its database. It **never invokes Claude directly** — instead it creates GitHub issues with structured task descriptions, and the user tells whatever Claude interface they prefer to process them. Claude posts results as comments; the app polls for them. See decisions 0 and 16 for full detail.
 
 -----
 
@@ -228,18 +228,18 @@ The guided reconciliation workflow (UC6) uses the standard issue protocol from d
 
 Remaining sub-questions:
 
-- **Single task type or two-stage flow?** Decision 16's `task:reconcile` covers the in-app reconciliation flow. An earlier draft proposed a separate `reconciliation-pending` label for *user-initiated downstream sessions* (someone running `gh issue list --label task:reconcile` outside the app's flow). These are the same issues — the label is shared. Confirm
+- **Single task type or two-stage flow?** Decision 16's `task:reconcile` covers the in-app reconciliation flow. An earlier draft proposed a separate `reconciliation-pending` label for *user-initiated downstream sessions* (someone listing open `task:reconcile` issues from another Claude interface outside the app's flow). These are the same issues — the label is shared. Confirm
 - **Fallback to a working-directory file** (e.g. `proposals/reconciliations/<entry-id>-<timestamp>.md`) for cases where issue creation isn't appropriate (rare; mostly when GitHub is down)
 - **Issue body format** is specified by decision 16's `task:reconcile` schema (entry ID, versions compared, expected output). The `claude-result` block returned by Claude contains the inventory of distinct ideas and recommendations
 - **Conversation continuation:** the issue itself holds the multi-turn conversation per decision 16 (Claude posts `final: false` until the user signals `final: true`). The accepted result is written back to the canonical entry by the app; the issue is closed with a summary comment
 
 ### 16. Issue Protocol (the app's only Claude integration)
 
-**Architecture in one sentence:** the app produces GitHub issues containing structured task descriptions; the user, working in any Claude interface (Claude Code CLI, Claude.ai with the GitHub MCP connector, Claude Desktop, web), tells Claude "process the open issues with label X"; Claude reads each issue, performs the work, and posts results as issue comments (and / or commits, PRs, etc.); the app polls the issue or listens via webhook to learn when a response has been posted, then continues. This replaces both decision 4 (todo directory) and decision 7 (Agent SDK integration) for the v0.x phase.
+**Architecture in one sentence:** the app produces GitHub issues containing structured task descriptions; the user, working in whatever Claude interface they prefer (any interface that can read and write GitHub issues), tells Claude "process the open issues with label X"; Claude reads each issue, performs the work, and posts results as issue comments (and / or commits, PRs, etc.); the app polls the issue or listens via webhook to learn when a response has been posted, then continues. This replaces both decision 4 (todo directory) and decision 7 (Agent SDK integration) for the v0.x phase.
 
 **Why this design:**
 - Eliminates the need for the app to host Claude (no `claude -p`, no Agent SDK in-process, no `ANTHROPIC_API_KEY`, no `CLAUDE_CODE_OAUTH_TOKEN`)
-- Lets the user drive Claude in whatever interface they prefer (iPad → Claude.ai with GitHub MCP; desktop → Claude Code CLI or Desktop)
+- Lets the user drive Claude through whichever Claude interface fits their current device or context — the protocol does not depend on a specific product
 - Uses GitHub as both the message bus and the audit trail — every task and every Claude response is preserved as issue history
 - Keeps the app pure-frontend, which is what makes the SPA-on-GitHub-Pages hosting viable
 
@@ -323,7 +323,7 @@ Claude's response comment:
 
 **What it is:** A browser-based single-page web application, hosted as static files on GitHub Pages, that manages Claude skill files (SKILL.md), AGENTS.md fragments, and Architecture Decision Records across multiple GitHub repositories. It provides a canonical source of truth in a dedicated GitHub repo, drift detection, AI-assisted reconciliation (delegated to whatever Claude interface the user is in, via GitHub issues), proposal harvesting from retrospectives, and modular composition of skills / fragments / ADRs per repo.
 
-**Why it exists:** The user works across multiple platforms (Claude web, Claude for Windows, Claude Code CLI, iPad, iPhone) and uses Claude skills + AGENTS.md fragments + ADRs stored in individual repositories. When any of these is updated in one repo, copies in other repos diverge. There is currently no way to detect or reconcile this drift without manually inspecting each repo. The app being a browser SPA means it is usable from any of those platforms, including iPad.
+**Why it exists:** The user works across multiple Claude interfaces and devices, and uses Claude skills + AGENTS.md fragments + ADRs stored in individual repositories. When any of these is updated in one repo, copies in other repos diverge. There is currently no way to detect or reconcile this drift without manually inspecting each repo. The app being a browser SPA means it is usable from any device with a modern browser, including iPad.
 
 -----
 
@@ -356,7 +356,7 @@ Claude's response comment:
 #### 3. User's Claude Interface (out-of-process agent)
 
 - The app **never invokes Claude directly**. It writes labeled issues into the canonical repo containing structured task descriptions (decision 16)
-- The user, working in their preferred Claude interface (Claude Code CLI, Claude.ai with the GitHub MCP connector, Claude Desktop), tells Claude: "process the open issues with label `task:<type>`"
+- The user, working in whichever Claude interface they prefer (any interface that can read and write GitHub issues), tells Claude: "process the open issues with label `task:<type>`"
 - Claude reads each issue, performs the work, posts results as a comment containing a fenced `claude-result` block
 - The SPA polls the issue's comments endpoint for the result and continues
 - For multi-turn tasks (reconciliation), the conversation happens inside the issue and the SPA waits for `final: true`
@@ -501,7 +501,7 @@ This phase is not part of v0.x and does not affect the SPA architecture.
 - Using Playwright to automate Claude.ai was explicitly ruled out (ToS violation) — *still relevant constraint*
 - Using Claude Cowork was ruled out (not programmable) — *still relevant context*
 - *(superseded as a concern)* There is currently no IPC mechanism to inject prompts into a running interactive Claude Code session — *not a problem under decision 16, since the user manually drives Claude to process the queue*
-- The GitHub MCP connector was **not connected** in Claude.ai at time of writing — *still relevant; connecting it makes decision 16's workflow much smoother for iPad use*
+- At time of writing, the user had not yet connected a GitHub-aware Claude interface — *still relevant; making sure whichever Claude interface you use can read and write GitHub issues is what makes decision 16's workflow smooth, especially on iPad*
 
 -----
 
