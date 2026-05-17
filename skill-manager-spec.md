@@ -224,10 +224,14 @@ The user will continually recategorize and refactor library entries — splittin
 
 ### 15. Reconciliation Output Channel
 
-- **Default output channel** for the guided reconciliation workflow (UC6): proposal is **a GitHub issue** opened against the canonical repo with a specific label (proposed: `reconciliation-pending`). A separate Claude Code session can then process the queue with `gh issue list --label reconciliation-pending`. Confirm the channel and the label name
-- **Fallback channel:** a file in a working directory (e.g. `proposals/reconciliations/<entry-id>-<timestamp>.md`) for cases where issue creation isn't appropriate
-- **Issue body format:** structured markdown with frontmatter capturing entry ID, versions compared, and the Claude-generated inventory of distinct ideas + recommendations. The format must be parseable by a downstream Claude Code session so it can pick up the conversation
-- **Conversation continuation:** when a separate Claude Code session works an issue, where does the resulting decision go — back into the issue as comments, into a PR against the canonical repo, or both?
+The guided reconciliation workflow (UC6) uses the standard issue protocol from decision 16 with the `task:reconcile` label. Reconciliation is not a separate channel; it is one task type in the unified issue queue. The user's Claude session processes `task:reconcile` issues the same way it processes any other `task:*` label.
+
+Remaining sub-questions:
+
+- **Single task type or two-stage flow?** Decision 16's `task:reconcile` covers the in-app reconciliation flow. An earlier draft proposed a separate `reconciliation-pending` label for *user-initiated downstream sessions* (someone running `gh issue list --label task:reconcile` outside the app's flow). These are the same issues — the label is shared. Confirm
+- **Fallback to a working-directory file** (e.g. `proposals/reconciliations/<entry-id>-<timestamp>.md`) for cases where issue creation isn't appropriate (rare; mostly when GitHub is down)
+- **Issue body format** is specified by decision 16's `task:reconcile` schema (entry ID, versions compared, expected output). The `claude-result` block returned by Claude contains the inventory of distinct ideas and recommendations
+- **Conversation continuation:** the issue itself holds the multi-turn conversation per decision 16 (Claude posts `final: false` until the user signals `final: true`). The accepted result is written back to the canonical entry by the app; the issue is closed with a summary comment
 
 ### 16. Issue Protocol (the app's only Claude integration)
 
@@ -270,11 +274,12 @@ The user will continually recategorize and refactor library entries — splittin
 **Worked example — drift summary task:**
 
 Issue title: `[task:drift-summary] Compare canonical skill skl_a3f9k2 against owner/repo-a copy`
+
 Labels: `task:drift-summary`
 
 Issue body:
 
-~~~markdown
+````markdown
 ---
 task_id: 0192f8a3-bc4d-7e21-9876-543210abcdef
 task_type: drift-summary
@@ -295,11 +300,11 @@ expected_output: |
 Please compare these two versions of the same skill and post a `claude-result`
 block describing the semantic differences. This is fully automated input; reply
 only with the result block.
-~~~
+````
 
 Claude's response comment:
 
-~~~markdown
+````markdown
 ```claude-result
 {
   "summary": "Target adds two new trigger keywords (.dotx, .docm) and rephrases the 'when to use' section more concisely. Canonical is otherwise identical.",
@@ -308,7 +313,7 @@ Claude's response comment:
   "final": true
 }
 ```
-~~~
+````
 
 -----
 
@@ -330,13 +335,13 @@ Claude's response comment:
 
 - A dedicated GitHub repository that is the single source of truth for skills, AGENTS.md fragments, ADRs, manifests, proposals, lineage, and provenance
 - Git history serves as the full version history
-- Layout (subject to confirmation of specific directory names in decisions 9–13):
-  - `skills/` — canonical skill library
-  - `agents-md/` — canonical AGENTS.md fragment library
-  - `adrs/` — canonical ADR library
+- Proposed layout (each directory name still subject to confirmation in its respective decision):
+  - `skills/` — canonical skill library (decision 5)
+  - `agents-md/` — canonical AGENTS.md fragment library (decision 11)
+  - `adrs/` — canonical ADR library (decision 12)
   - `proposals/{skills,agents-md,adrs}/` — harvested-but-not-yet-implemented entries (decision 10)
-  - Per-repo manifests (location TBD per decisions 2 and 11)
-  - Lineage data (per decision 13: per-entry frontmatter + optional derived cache)
+  - Per-repo manifests, location TBD (decisions 2 and 11)
+  - Lineage data: per-entry frontmatter + optional derived cache (decision 13)
 - GitHub Issues in this repo serve as the message bus to the user's Claude session (decision 16)
 
 #### 2. SPA on GitHub Pages
@@ -436,7 +441,7 @@ Claude's response comment:
 
 - Per-repo and bulk sync operations in both directions (canonical → repo and repo → canonical)
 - Provenance tracking for entries that originated in or also appear in tracked repos
-- "GitHub issue with label" output channel for reconciliation proposals, so a separate Claude Code session can pick the queue up by label and process it conversationally (see UC5 and UC6 below)
+- All Claude-touching work in both sync directions uses the issue protocol (decision 16) — `task:drift-summary` for semantic drift, `task:ingest-similarity-check` for repo→canonical similarity, `task:reconcile` for guided reconciliation. See UC4, UC5, UC6 in `use-cases-spec.md`
 
 ### Phase 2 — Optional Backend for Direct Agent Driving (Future)
 
@@ -451,8 +456,8 @@ This phase is not part of v0.x and does not affect the SPA architecture.
 
 - Interactive editor for improving skills
 - Side-by-side comparison of skill versions
-- Prompt Claude to suggest improvements to a skill
-- Publish improved version back to canonical with version bump
+- Open a `task:suggest-improvements` issue (decision 16) asking Claude for targeted improvement proposals
+- Publish improved version back to canonical with a new lineage record per decision 13
 
 -----
 
@@ -502,7 +507,7 @@ This phase is not part of v0.x and does not affect the SPA architecture.
 
 ## SUGGESTED FIRST STEPS FOR CLAUDE CODE
 
-1. Present the "Decisions Required" section to the user and collect answers for the still-open items (decisions 1–5, 9–16; decisions 0, 6, 7, 8 are resolved / superseded)
+1. Present the "Decisions Required" section to the user and collect answers for the still-open items. Status: decision 0 decided; 6 and 8 answered by 0; 4 and 7 superseded by 16; 1, 2, 3, 5, 9–16 still open
 1. Once decisions are recorded, update this spec with the confirmed answers
 1. Register a public GitHub OAuth App on the canonical-repo-owning account; capture `client_id`
 1. Scaffold the SPA (suggested: React + Vite for a clean GitHub Pages deployment story)

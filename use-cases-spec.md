@@ -141,7 +141,7 @@ Companion document to `skill-manager-spec.md`. These are the standard user workf
 
 **Outputs:**
 - Target repo(s) updated to match canonical
-- Drift surfaces redirected into UC6 where the user opted in
+- For entries where the user chose reconciliation, a `task:reconcile` issue is opened per UC6
 - Sync history recorded in the canonical repo
 
 **Open questions:**
@@ -208,7 +208,7 @@ Companion document to `skill-manager-spec.md`. These are the standard user workf
    - Versions in tracked repos (per provenance records)
    - Superseded predecessors via lineage
 3. App opens a `task:reconcile` issue per decision 16 with all versions referenced (by blob URL) and a structured prompt asking Claude to: inventory the distinct ideas in each version, recommend which ideas the current canonical should retain or absorb, and propose a merged version
-4. User goes to their Claude interface, runs the queue, has the conversation directly in the issue's comments. The conversation can be multi-turn — Claude posts intermediate `claude-result` comments with `final: false`, the user replies in-thread, and signals completion with `final: true`
+4. User instructs their Claude session to process `task:reconcile` issues. The conversation happens directly in the issue's comments and can be multi-turn: Claude posts intermediate `claude-result` comments with `final: false`, the user replies in-thread, and the conversation ends when a comment carries `final: true`
 5. App polls and recognizes `final: true`; surfaces the final proposal in the UI
 6. User accepts the proposal; app applies the agreed result to the canonical entry, writes a new lineage record per decision 13, and closes the issue with a summary comment
 
@@ -222,9 +222,8 @@ Companion document to `skill-manager-spec.md`. These are the standard user workf
 - Updated canonical entry on acceptance, with a new lineage record if substantive changes were made
 
 **Open questions:**
-- Confirm the label `task:reconcile` (used elsewhere in decision 16)
-- Reconciliation triggered outside the app (decision 15 mentions `reconciliation-pending` as a label for *user-initiated* downstream Claude sessions) — is `task:reconcile` the same workflow, or are these two distinct flows? If same, consolidate the label
 - Should the app open a single rollup issue for batch reconciliation, or one issue per entry?
+- For long multi-turn conversations: does the app passively wait indefinitely, or surface a "this issue has been idle for N days" prompt?
 
 -----
 
@@ -262,8 +261,8 @@ Companion document to `skill-manager-spec.md`. These are the standard user workf
    - Feature branches matching `feat/retrospective-*` (Mode B convention — see open questions for whether to scan branches)
    - For each candidate, classify as Mode B (has `<skill-name>/SPEC.md` subdirectories) or free-form
 3. App lists discovered retrospectives with a per-source summary:
-   - Mode B: parse `retrospective/README.md` skill-index table — display skill names + priorities + one-line summaries (no Claude work needed)
-   - Free-form: display filename + a Claude-generated one-line summary (opens a small `task:harvest-retrospective` summary issue, or batch all free-form summaries into one issue)
+   - Mode B: parse `retrospective/README.md` skill-index table — display skill names, priorities, and one-line summaries (no Claude work needed)
+   - Free-form: display filename, modification date, and the first ~200 characters of the body for triage (no Claude work needed at the list stage; Claude is only invoked when the user actually harvests a source)
 4. User picks which retrospectives to harvest, then clicks Harvest
 5. For each selected source, the app extracts proposals:
 
@@ -312,5 +311,5 @@ Companion document to `skill-manager-spec.md`. These are the standard user workf
 | UC3 — Configure composition | Read | Write per-repo | Optional (`task:compose-agents-md` preview) | — |
 | UC4 — Sync canonical → repo | Read | Read | Optional (`task:drift-summary`, `task:reconcile`) | Yes |
 | UC5 — Sync repo → canonical | Write (add or tag) | Optional update | Yes (`task:ingest-similarity-check`) | Optional manifest update |
-| UC6 — Reconcile | Read all versions; write on accept | — | Yes (`task:reconcile`) | — |
+| UC6 — Reconcile | Read all versions; write canonical on accept | — | Yes (`task:reconcile`) | Indirectly (via UC4 sync after canonical updated) |
 | UC7 — Harvest retrospectives | Write to `proposals/` | — | Conditional (Mode B: only `task:extract-adrs`; free-form: `task:harvest-retrospective`) | — |
