@@ -5,51 +5,67 @@
 **Companion documents:**
 - `use-cases-spec.md` — the standard user workflows (UC1–UC6) referenced from decisions 14, 15 and the Features section. Reviewable independently from this spec.
 
+> **Architecture clarification (latest):** the app **does not invoke Claude directly**. There is no `claude -p` subprocess, no Agent SDK integration, no `ANTHROPIC_API_KEY` anywhere. The app's sole job is to produce GitHub issues with structured task descriptions; the user, working in their preferred Claude interface (Claude Code CLI, Claude.ai with GitHub MCP, Claude Desktop, web), tells Claude "process the open issues with label X"; Claude reads each issue, does the work, and posts results as comments (and/or commits/PRs); the app polls the issue for the structured response and continues. This is captured in decision 0 (rewritten) and decision 16 (new). Decisions 4 (Todo Directory) and 7 (Agent SDK June 15) are **superseded** by this model — see the deprecation notes on those sections.
+
 -----
 
 ## DECISIONS REQUIRED BEFORE IMPLEMENTATION BEGINS
 
 These must be resolved before writing any code. Claude Code should prompt the user for each of these before proceeding.
 
-> **Note:** Decision 0 below is *blocking* and dominates decisions 6, 7, 8, large parts of the Architecture and Technology Decisions sections, and the framing of the Phase 1 "Todo Directory Writer" feature. Resolve decision 0 first; the answers to 1–15 may shift depending on it.
+> **Note:** Decision 0 below dominates decisions 6, 8, large parts of the Architecture and Technology Decisions sections, and the framing of Phase 1 features. Resolve decision 0 first; the answers to 1–16 may shift depending on it. (Decisions 4 and 7 are superseded by decision 0's clarified interaction model — see notes on those sections.)
 
-### 0. BLOCKING — Hosting Architecture (Electron desktop vs web app)
+### 0. Hosting Architecture and Auth (clarified)
 
-A late-breaking requirement: the user wants to use the app **from an iPad** as well as from a computer, and explicitly does not want to build a native iPad app. The current spec assumes an Electron desktop app on Windows, which doesn't run on iPad. This decision must be made before the rest of the spec is meaningful.
+Two requirements drive this decision:
+1. The app must be usable **from an iPad** as well as from a computer; the user does not want to build a native iPad app
+2. The app **does not call Claude directly** — Claude work flows through GitHub issues consumed by whatever Claude interface the user is in (see decision 16). The app's only runtime job is GitHub API calls plus UI
 
-**Options:**
+**Options walked through:**
 
-**A. Keep Electron, ship a separate native iPad app later.** Two codebases, two release pipelines, plus the native iPad work the user said they want to avoid. Not recommended.
+**A. Electron desktop app.** Killed by the iPad requirement. Skip.
 
-**B. Pivot to a single-page web app hosted on GitHub Pages, with GitHub Actions as the work backend. *(RECOMMENDED)***
-- Browser-based SPA serves UI from GitHub Pages — runs on iPad Safari, desktop browsers, anywhere
-- All persistent state lives in the canonical GitHub repo (manifests, libraries, proposal queue, lineage, provenance)
-- Octokit calls GitHub directly from the browser (GitHub API supports CORS for authenticated requests)
-- GitHub auth: OAuth Device Flow (iPad-friendly) or a fine-grained PAT pasted by the user; token stored in browser IndexedDB, ideally encrypted with a passphrase-derived key
-- **LLM work happens inside GitHub Actions, not in the browser.** When the SPA needs Claude (drift summary, retrospective harvest, ADR enrichment, reconciliation), it writes a structured task file to the canonical repo and commits it. A workflow triggered on changes under `tasks/` runs the Claude Code Action, completes the work, commits results, and updates task status or opens an issue per UC6
-- The Phase 1 "Todo Directory Writer" concept already in the spec maps naturally onto this task-file mechanism; the manual `claude -p` invocation is replaced by the Action
-- Action latency (~10–30s cold start) is acceptable for occasional reconciliation; bulk operations (e.g. nightly harvest) run as scheduled workflows
-- Browser learns about Action completion via polling the relevant API (issue comments, commits, workflow runs) or via a webhook-triggered Pages rebuild
+**B. SPA hosted on GitHub Pages. *(RECOMMENDED for v0.x)***
+- Just static HTML / CSS / JS in a GitHub Pages repo. Free hosting. Works on iPad Safari and every desktop browser
+- Talks directly to the GitHub REST API (CORS is supported for authenticated requests)
+- **No backend needed** because the LLM work is delegated to the user's Claude session via issues (decision 16). The SPA's job is: render UI, read and write files in the canonical repo via the GitHub API, create issues, poll issue comments
+- All persistent state lives in the canonical GitHub repo (manifests, libraries, proposal queue, lineage, provenance). GitHub *is* the database
 
-**C. SPA on GitHub Pages + a small hosted backend (Cloudflare Worker, Fly.io, etc.).** Lower latency than Actions, but adds hosting cost and ops burden. Not recommended unless Action latency proves unacceptable in practice.
+**C. SPA + small backend (AWS Lambda, Cloudflare Worker, etc.).**
+- Worth it only when you need (a) true OAuth Web Flow with `client_secret` protection, (b) shared state across devices outside GitHub, or (c) long-running background work that cannot run in the user's Claude session. None apply right now
+- Defer to the Agent-SDK-era rearchitecture
 
 **Recommendation: Option B.**
 
-**If Option B is chosen, these spec sections need rewriting:**
-- ARCHITECTURE — components become SPA + GitHub Pages + GitHub Actions, not Electron + Node + CLI subprocess
-- TECHNOLOGY DECISIONS — Electron → SPA framework (suggested: React + Vite, smallest reasonable footprint with well-documented Pages deployment); add Pages and Actions config
-- Decision 6 (GitHub Auth) — PAT in `safeStorage` becomes OAuth Device Flow or PAT in IndexedDB
-- Decision 7 (Agent SDK June 15) — runs inside the Action, not in the app process
-- Decision 8 (Target platforms) — replaced by browser targets (iPad Safari, desktop Chrome/Firefox/Edge/Safari)
-- Phase 1 features — reframe Todo Directory Writer as Task File Writer + Workflow Runner
-- Phase 2 features — described as an Action upgrade (Agent SDK swapped in inside the workflow) rather than an in-process IPC replacement
-- KNOWN CONSTRAINTS — add: Action cold-start latency, Action runner 6h timeout, browser CORS limits for GitHub API, iPad Safari storage quirks (IndexedDB eviction under storage pressure, 7-day ITP cap on script-writable storage)
+**Note on dynamic hosting:** GitHub Pages is static-only. For server-side work, GitHub Actions can act as a poor-man's backend (event- or schedule-triggered, cold-start 10-30s). Not needed in v0.x because of the issues-as-message-bus model; may return when the Agent SDK is integrated.
 
-**Open sub-questions even within Option B (decide alongside or shortly after):**
-- Claude auth inside Actions: Max-subscription OAuth token (`CLAUDE_CODE_OAUTH_TOKEN` as a repo secret) or a pay-as-you-go `ANTHROPIC_API_KEY`? Max OAuth is preferred if it works in the Claude Code Action without manual re-auth; API key is a clean fallback
+**Auth options for Option B** (ordered easiest to most "proper"):
+
+1. **Pasted fine-grained PAT *(v0.1 recommendation - simplest possible)*.** User creates a fine-grained PAT in GitHub Settings, scopes to the relevant repos, pastes into the app. App encrypts with a passphrase-derived key (WebCrypto) and stores in IndexedDB. Zero infrastructure, zero secrets in the app. Downside: fine-grained PATs cap at 1-year expiry; user must rotate
+2. **GitHub OAuth Device Flow *(v0.2 - better UX, still no backend)*.** SPA shows a 6-char user code; user visits `github.com/login/device`, enters code, authorizes. SPA polls for the access token. **Device Flow does not require a `client_secret`** - it is designed for clients that cannot keep secrets, so `client_id` can safely be embedded in the JS bundle. Requires registering a public OAuth App
+3. **GitHub App with user-to-server tokens.** Modern, granular permissions. Requires `client_secret` handling, which needs a tiny serverless function for the code exchange. Right answer eventually; overkill now
+
+**iPad storage caveat:** Safari ITP evicts script-writable storage (IndexedDB) after roughly 7 days of inactivity. User re-authenticates after a gap. Acceptable; not a blocker.
+
+**Future re-architecture (post Agent SDK, when the app needs to drive agents directly):**
+- **GitHub Actions** triggered by `repository_dispatch` from the SPA - stays on GitHub infra, no AWS. Cold-start 10-30s. Private repos: 2,000 Action minutes per month on Free
+- **AWS Lambda** - sub-second response, more setup. Right answer if Action latency becomes a problem or long-lived stateful agents are needed
+- User has expressed preference for staying on GitHub Actions if viable; revisit when the Agent SDK becomes part of the design
+
+**If Option B is confirmed, these spec sections need rewriting** (deferred to follow-up PR after decisions are locked):
+- ARCHITECTURE - components become SPA + GitHub Pages + canonical-repo-as-database + Claude-via-issues, not Electron + Node + CLI subprocess
+- TECHNOLOGY DECISIONS - Electron becomes a SPA framework (suggested: React + Vite for documented Pages deployment and small bundle); remove `claude -p` and Agent SDK from the v0.x stack
+- Decision 6 (GitHub Auth) - supersede with the auth tier above
+- Decision 7 (Agent SDK June 15) - **superseded** by decision 16; the app does not host Claude at all
+- Decision 8 (Target platforms) - replace with browser targets (iPad Safari, desktop Chrome / Firefox / Edge / Safari)
+- Decision 4 (Todo Directory) - **superseded** by decision 16 (issues as message bus)
+- Phase 1 features - reframe "Todo Directory Writer" as "Issue Creator" per decision 16
+- KNOWN CONSTRAINTS - add: iPad Safari ITP 7-day storage eviction; remove `claude -p` cold-start; remove Agent SDK credit-limit relevance
+
+**Open sub-questions within Option B:**
 - SPA framework: React + Vite (recommended), Svelte + SvelteKit static export, or vanilla TS?
-- Token persistence in the browser: IndexedDB with passphrase-derived encryption key, or session-only with re-auth each session?
-- Action completion notification: poll workflow runs API, poll target issue/commit, or use a GitHub webhook → Pages rebuild trigger?
+- Auth tier to ship in v0.1: pasted PAT (lightest) or jump straight to Device Flow?
+- Token encryption: passphrase-derived key (user supplies passphrase on app open) or session-only (re-paste or re-auth each session)?
 
 ### 1. Skill Identity & Versioning
 
@@ -83,7 +99,9 @@ A late-breaking requirement: the user wants to use the app **from an iPad** as w
 - What directory structure inside that repo?
 - Should old versions be kept as git history only, or also as named snapshot files?
 
-### 4. Todo Directory Format
+### 4. Todo Directory Format — *SUPERSEDED by decision 16*
+
+> This decision is obsoleted by the issues-as-message-bus model in decision 16. The "todo directory" concept is replaced by GitHub issues created in the canonical repo. The format question moves to decision 16's "issue body format" section. Retained below for historical reference only.
 
 - The bridge mechanism (pre-Agent SDK): the app writes structured task files into a `/todo` directory in target repos, and the user manually points Claude Code at them
 - Format of task files: JSON? YAML? Markdown with frontmatter?
@@ -117,7 +135,9 @@ A late-breaking requirement: the user wants to use the app **from an iPad** as w
 - How is the token stored? Electron’s `safeStorage` API (OS keychain) is recommended — confirm this is acceptable
 - Does the user have a GitHub Personal Access Token (classic) or will they use a fine-grained token?
 
-### 7. Agent SDK Integration (June 15, 2026)
+### 7. Agent SDK Integration (June 15, 2026) — *SUPERSEDED by decision 16*
+
+> This decision is obsoleted by the issues-as-message-bus model in decision 16. The app no longer needs to call Claude directly — the user's Claude session is the agent. The Agent SDK may become relevant later if the app evolves to drive agents itself (see decision 0's "Future re-architecture" section), but it is not part of v0.x. Retained below for historical reference only.
 
 - On June 15, the todo directory + manual Claude Code step gets replaced by Agent SDK calls
 - Max 20x plan = $200/month Agent SDK credit
@@ -223,6 +243,80 @@ The user will continually recategorize and refactor library entries — splittin
 - **Fallback channel:** a file in a working directory (e.g. `proposals/reconciliations/<entry-id>-<timestamp>.md`) for cases where issue creation isn't appropriate
 - **Issue body format:** structured markdown with frontmatter capturing entry ID, versions compared, and the Claude-generated inventory of distinct ideas + recommendations. The format must be parseable by a downstream Claude Code session so it can pick up the conversation
 - **Conversation continuation:** when a separate Claude Code session works an issue, where does the resulting decision go — back into the issue as comments, into a PR against the canonical repo, or both?
+
+### 16. Issue Protocol (the app's only Claude integration)
+
+**Architecture in one sentence:** the app produces GitHub issues containing structured task descriptions; the user, working in any Claude interface (Claude Code CLI, Claude.ai with the GitHub MCP connector, Claude Desktop, web), tells Claude "process the open issues with label X"; Claude reads each issue, performs the work, and posts results as issue comments (and / or commits, PRs, etc.); the app polls the issue or listens via webhook to learn when a response has been posted, then continues. This replaces both decision 4 (todo directory) and decision 7 (Agent SDK integration) for the v0.x phase.
+
+**Why this design:**
+- Eliminates the need for the app to host Claude (no `claude -p`, no Agent SDK in-process, no `ANTHROPIC_API_KEY`, no `CLAUDE_CODE_OAUTH_TOKEN`)
+- Lets the user drive Claude in whatever interface they prefer (iPad → Claude.ai with GitHub MCP; desktop → Claude Code CLI or Desktop)
+- Uses GitHub as both the message bus and the audit trail — every task and every Claude response is preserved as issue history
+- Keeps the app pure-frontend, which is what makes the SPA-on-GitHub-Pages hosting viable
+
+**Decisions to lock down:**
+
+- **Issue location:** in the canonical repo (so a single Claude session can see all pending work across all tracked repos). Confirm
+- **Labels per task type:** each task type gets its own label so the user can scope a Claude session to one class of work. Proposed labels (confirm and revise):
+  - `task:drift-summary` - semantic diff of two versions of an entry
+  - `task:harvest-retrospective` - extract proposals from a retrospective directory
+  - `task:enrich-adr-proposal` - add retrospective context to a proposed ADR
+  - `task:reconcile` - guided reconciliation (UC6)
+  - `task:ingest-similarity-check` - repo→canonical similarity comparison (UC5)
+  - `task:compose-agents-md` - assemble an AGENTS.md preview from selected fragments
+- **Issue body format:** structured markdown with a YAML frontmatter block at top capturing:
+  - `task_id` (uniquely identifies this task instance — UUID or hash)
+  - `task_type` (matches the label suffix)
+  - `created_by: skill-registry-app`
+  - `created_at`
+  - `inputs:` (everything Claude needs — entry IDs, file paths, links to specific blob versions via `https://github.com/.../blob/<sha>/path`)
+  - `expected_output:` (description of what the response comment should contain)
+  - The body below the frontmatter is human-readable context (prose explanation of the task, links to relevant docs)
+- **Response format:** Claude posts a comment whose body contains a fenced code block tagged `claude-result` (e.g. ` ```claude-result\n...\n``` `) wrapping structured JSON or YAML. The app polls comments and processes the first comment whose body contains that fence. Confirm marker name
+- **Completion signal:** for single-shot tasks, the first `claude-result` comment is the answer. For multi-turn tasks (reconciliation), the response includes `final: false` until the conversation is done; the user (in Claude) signals completion with `final: true`. The app considers a task complete on `final: true` (or implicit `true` if absent for single-shot task types)
+- **Polling cadence:** when the user is actively in the app, poll the issue's `comments` endpoint every N seconds (proposed: 5s). When the app isn't open, no polling — the user manually triggers a "check for responses" action on app open. Confirm cadence
+- **Webhook alternative (optional later):** GitHub webhook → tiny serverless endpoint (Cloudflare Worker free tier) → SSE / WebSocket back to the app for low-latency completion. Adds infrastructure; nice-to-have, not required for v0.x
+- **Issue closure:** after the app processes the final response and updates state, the app closes the issue (with a final comment summarizing what was done). Confirm: app closes, or leave open for the user?
+- **Stale-issue handling:** if an issue sits unresolved for N days, surface in the app's "needs attention" view. Confirm staleness threshold
+- **Conversation continuity for multi-step tasks:** the app does not need to participate in the conversation itself — it just watches for `final: true`. This means the user can have an arbitrarily long back-and-forth with Claude inside one issue, and the app picks up only when complete
+
+**Worked example — drift summary task:**
+
+```
+Issue title:    [task:drift-summary] Compare canonical skill `skl_a3f9k2` against owner/repo-a copy
+Labels:         task:drift-summary
+Body:
+  ---
+  task_id: 0192f8a3-bc4d-7e21-9876-543210abcdef
+  task_type: drift-summary
+  created_by: skill-registry-app
+  created_at: 2026-05-17T14:32:18Z
+  inputs:
+    entry_id: skl_a3f9k2
+    entry_name: docx-converter
+    canonical_blob: https://github.com/owner/canonical/blob/abc123/skills/docx-converter/SKILL.md
+    target_blob: https://github.com/owner/repo-a/blob/def456/.claude/skills/docx-converter/SKILL.md
+  expected_output:
+    A `claude-result` block containing JSON with fields:
+      summary: 1-3 sentence semantic summary of the differences
+      categories: list of difference categories (e.g. "expanded triggers", "new examples", "wording")
+      recommendation: "canonical-wins" | "target-wins" | "merge-needed"
+  ---
+  Please compare these two versions of the same skill and post a `claude-result` block
+  describing the semantic differences. This is fully automated input; reply only with
+  the result block.
+
+Claude's response comment:
+  ```claude-result
+  {
+    "summary": "Target adds two new trigger keywords (`.dotx`, `.docm`) and rephrases the
+                'when to use' section more concisely. Canonical is otherwise identical.",
+    "categories": ["expanded triggers", "wording"],
+    "recommendation": "merge-needed",
+    "final": true
+  }
+  ```
+```
 
 -----
 
@@ -391,6 +485,8 @@ The user will continually recategorize and refactor library entries — splittin
 -----
 
 ## SESSION CONTEXT (for Claude Code handoff)
+
+> **Note (May 2026 update):** The bullets below capture the original Claude.ai session that produced the first draft of this spec. Several items have since been clarified or superseded — see the **Architecture clarification** note at the top of this document, and decisions 0 and 16. In particular: the app no longer hosts Claude (no `claude -p`, no Agent SDK), and Electron is replaced by an SPA on GitHub Pages because of the iPad requirement.
 
 This spec was created in a Claude.ai chat session. The following were established during that conversation:
 
