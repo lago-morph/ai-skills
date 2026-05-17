@@ -3,17 +3,17 @@
 ## Status: Pre-Implementation
 
 **Companion documents:**
-- `use-cases-spec.md` — the standard user workflows (UC1–UC6) referenced from decisions 14, 15 and the Features section. Reviewable independently from this spec.
+- `use-cases-spec.md` — the standard user workflows (UC1–UC7). Reviewable independently from this spec.
 
-> **Architecture clarification (latest):** the app **does not invoke Claude directly**. There is no `claude -p` subprocess, no Agent SDK integration, no `ANTHROPIC_API_KEY` anywhere. The app's sole job is to produce GitHub issues with structured task descriptions; the user, working in their preferred Claude interface (Claude Code CLI, Claude.ai with GitHub MCP, Claude Desktop, web), tells Claude "process the open issues with label X"; Claude reads each issue, does the work, and posts results as comments (and/or commits/PRs); the app polls the issue for the structured response and continues. This is captured in decision 0 (rewritten) and decision 16 (new). Decisions 4 (Todo Directory) and 7 (Agent SDK June 15) are **superseded** by this model — see the deprecation notes on those sections.
+> **Architecture summary:** the app is a single-page web app hosted on GitHub Pages (decision 0). It talks to the GitHub REST API directly from the browser and uses a dedicated GitHub repo as its database. It **never invokes Claude directly** — instead it creates GitHub issues with structured task descriptions, and the user tells their Claude session (Claude Code CLI, Claude.ai with GitHub MCP, Claude Desktop, etc.) to process them. Claude posts results as comments; the app polls for them. See decisions 0 and 16 for full detail.
 
 -----
 
 ## DECISIONS REQUIRED BEFORE IMPLEMENTATION BEGINS
 
-These must be resolved before writing any code. Claude Code should prompt the user for each of these before proceeding.
+These must be resolved before writing any code. Claude Code should prompt the user for each remaining open item before proceeding.
 
-> **Note:** Decision 0 below dominates decisions 6, 8, large parts of the Architecture and Technology Decisions sections, and the framing of Phase 1 features. Resolve decision 0 first; the answers to 1–16 may shift depending on it. (Decisions 4 and 7 are superseded by decision 0's clarified interaction model — see notes on those sections.)
+> **Status overview:** Decisions 0, 6, 7, 8 are resolved (0 decided; 6 and 8 answered by 0; 7 superseded by 16) and decision 4 is superseded by 16. Decisions 1, 2, 3, 5, 9–16 are still open.
 
 ### 0. Hosting Architecture and Auth — *DECIDED*
 
@@ -130,14 +130,20 @@ These must be resolved before writing any code. Claude Code should prompt the us
 
 ### 9. Retrospective Harvesting
 
-- Directory matching: case-insensitive substring match on `retrospect` in the directory name (e.g. `retrospective/`, `retros/`, `Retrospect/`, `session-retrospectives/`). Confirm
-- How is the retrospective report identified inside a matched directory? Options:
-  - A conventional filename (e.g. `RETROSPECTIVE.md`, `retrospective.md`, `report.md`)
-  - The newest `.md` file
-  - Every `.md` file in the directory
-- Are retrospective reports structured (parseable sections we can split mechanically) or free-form (require Claude to extract proposals)? Default assumption: free-form, extracted by `claude -p`
-- Deduplication: if the same retrospective is harvested twice, or the same proposal appears in multiple retrospectives, how do we detect and collapse duplicates? Hash of source path + a Claude-generated proposal fingerprint?
-- Frequency: is harvesting a manual user-triggered action, a scheduled background scan, or both?
+See **UC7** in `use-cases-spec.md` for the full workflow. The harvester recognizes two source formats:
+
+- **Structured (Mode B output of the `self-retrospective` skill in this repo).** Produced as a `retrospective/` directory tree on a `feat/retrospective-<YYYYMMDD>` branch. Layout: `retrospective/README.md` (skill-index table), `retrospective/<skill-name>/{README.md, SPEC.md, excerpts.jsonl?, examples/?}` per proposed skill, and `retrospective/agents-md-template/{README.md, SPEC.md}` for proposed AGENTS.md rules. The skill's quality bar requires each `SPEC.md` to be self-contained, so structured-source extraction needs no Claude work for skill / fragment proposals
+- **Free-form.** Any other markdown that looks like a retrospective (`RETROSPECTIVE.md`, `retros/*.md`, `*retrospect*.md`). Extraction requires Claude via a `task:harvest-retrospective` issue (decision 16)
+
+Open items:
+
+- **Directory matching pattern:** case-insensitive substring `retrospect` (catches `retrospective/`, `retros/`, `Retrospect/`, `session-retrospectives/`). Confirm
+- **Branch scanning:** scan `feat/retrospective-*` branches (Mode B convention) in addition to the default branch? Pro: catches freshest material before merge. Con: rate-limit cost. Confirm
+- **Free-form report identification:** by conventional filename (`RETROSPECTIVE.md`, `report.md`), the newest `.md`, or every `.md` in a matched directory? Confirm
+- **Deduplication:** hash of `(source_repo, source_path, content_hash)` for exact-match; for cross-retrospective same-proposal detection, Claude-generated fingerprint via a `task:proposal-fingerprint` issue. Confirm
+- **AGENTS.md template handling:** Mode B emits a single `agents-md-template/SPEC.md` containing numbered rules. Split into per-rule fragments at harvest time (one entry in `proposals/agents-md/` per rule) or import as one composite fragment? Confirm
+- **ADR extraction from Mode B:** the self-retrospective skill does not directly emit ADR proposals — they must be derived from Part 1 narrative or scope-decision sections via a `task:extract-adrs` issue per retrospective. Confirm this approach
+- **Frequency:** manual user-triggered, scheduled scan, or both?
 
 ### 10. Proposal Queue
 
@@ -151,7 +157,7 @@ These must be resolved before writing any code. Claude Code should prompt the us
     adrs/           # Proposed Architecture Decision Records
   ```
 - Proposal file format: Markdown with frontmatter capturing `source_repo`, `source_retrospective`, `harvested_at`, `status`, `proposal_type`. Confirm
-- **ADR enrichment requirement:** each ADR proposal must include enough context drawn from its source retrospective that it can be implemented without re-reading the original report. Enrichment is performed by Claude during harvest (one `claude -p` call per proposal). Confirm
+- **ADR enrichment requirement:** each ADR proposal must include enough context from its source retrospective that it can be implemented without re-reading the original report. Enrichment is performed by Claude during harvest via a `task:enrich-adr-proposal` issue (decision 16). Confirm
 - Status lifecycle: `proposed` → `accepted` → `implemented` → `archived` (or `rejected`). Confirm
 - Promotion: when a `proposals/skills/foo.md` is accepted, does the app move it to `skills/foo/SKILL.md` (and update the manifest), or does the user do that by hand?
 
@@ -237,12 +243,14 @@ The user will continually recategorize and refactor library entries — splittin
 
 - **Issue location:** in the canonical repo (so a single Claude session can see all pending work across all tracked repos). Confirm
 - **Labels per task type:** each task type gets its own label so the user can scope a Claude session to one class of work. Proposed labels (confirm and revise):
-  - `task:drift-summary` - semantic diff of two versions of an entry
-  - `task:harvest-retrospective` - extract proposals from a retrospective directory
-  - `task:enrich-adr-proposal` - add retrospective context to a proposed ADR
-  - `task:reconcile` - guided reconciliation (UC6)
-  - `task:ingest-similarity-check` - repo→canonical similarity comparison (UC5)
-  - `task:compose-agents-md` - assemble an AGENTS.md preview from selected fragments
+  - `task:drift-summary` — semantic diff of two versions of an entry
+  - `task:harvest-retrospective` — extract proposals from a free-form retrospective (UC7)
+  - `task:extract-adrs` — identify and draft ADR proposals from a retrospective's narrative (UC7)
+  - `task:enrich-adr-proposal` — add retrospective context to a proposed ADR
+  - `task:proposal-fingerprint` — generate a normalized fingerprint for cross-source dedup
+  - `task:reconcile` — guided reconciliation (UC6)
+  - `task:ingest-similarity-check` — repo→canonical similarity comparison (UC5)
+  - `task:compose-agents-md` — assemble an AGENTS.md preview from selected fragments
 - **Issue body format:** structured markdown with a YAML frontmatter block at top capturing:
   - `task_id` (uniquely identifies this task instance — UUID or hash)
   - `task_type` (matches the label suffix)
@@ -261,41 +269,46 @@ The user will continually recategorize and refactor library entries — splittin
 
 **Worked example — drift summary task:**
 
-```
-Issue title:    [task:drift-summary] Compare canonical skill `skl_a3f9k2` against owner/repo-a copy
-Labels:         task:drift-summary
-Body:
-  ---
-  task_id: 0192f8a3-bc4d-7e21-9876-543210abcdef
-  task_type: drift-summary
-  created_by: skill-registry-app
-  created_at: 2026-05-17T14:32:18Z
-  inputs:
-    entry_id: skl_a3f9k2
-    entry_name: docx-converter
-    canonical_blob: https://github.com/owner/canonical/blob/abc123/skills/docx-converter/SKILL.md
-    target_blob: https://github.com/owner/repo-a/blob/def456/.claude/skills/docx-converter/SKILL.md
-  expected_output:
-    A `claude-result` block containing JSON with fields:
-      summary: 1-3 sentence semantic summary of the differences
-      categories: list of difference categories (e.g. "expanded triggers", "new examples", "wording")
-      recommendation: "canonical-wins" | "target-wins" | "merge-needed"
-  ---
-  Please compare these two versions of the same skill and post a `claude-result` block
-  describing the semantic differences. This is fully automated input; reply only with
-  the result block.
+Issue title: `[task:drift-summary] Compare canonical skill skl_a3f9k2 against owner/repo-a copy`
+Labels: `task:drift-summary`
+
+Issue body:
+
+~~~markdown
+---
+task_id: 0192f8a3-bc4d-7e21-9876-543210abcdef
+task_type: drift-summary
+created_by: skill-registry-app
+created_at: 2026-05-17T14:32:18Z
+inputs:
+  entry_id: skl_a3f9k2
+  entry_name: docx-converter
+  canonical_blob: https://github.com/owner/canonical/blob/abc123/skills/docx-converter/SKILL.md
+  target_blob: https://github.com/owner/repo-a/blob/def456/.claude/skills/docx-converter/SKILL.md
+expected_output: |
+  A `claude-result` block containing JSON with fields:
+    summary: 1-3 sentence semantic summary of the differences
+    categories: list of difference categories (e.g. "expanded triggers", "wording")
+    recommendation: "canonical-wins" | "target-wins" | "merge-needed"
+---
+
+Please compare these two versions of the same skill and post a `claude-result`
+block describing the semantic differences. This is fully automated input; reply
+only with the result block.
+~~~
 
 Claude's response comment:
-  ```claude-result
-  {
-    "summary": "Target adds two new trigger keywords (`.dotx`, `.docm`) and rephrases the
-                'when to use' section more concisely. Canonical is otherwise identical.",
-    "categories": ["expanded triggers", "wording"],
-    "recommendation": "merge-needed",
-    "final": true
-  }
-  ```
+
+~~~markdown
+```claude-result
+{
+  "summary": "Target adds two new trigger keywords (.dotx, .docm) and rephrases the 'when to use' section more concisely. Canonical is otherwise identical.",
+  "categories": ["expanded triggers", "wording"],
+  "recommendation": "merge-needed",
+  "final": true
+}
 ```
+~~~
 
 -----
 
@@ -329,10 +342,11 @@ Claude's response comment:
 #### 2. SPA on GitHub Pages
 
 - Static HTML / CSS / JS bundle hosted from a GitHub Pages site
-- Talks directly to the GitHub REST API via Octokit-rest (browser-compatible) — CORS is supported for authenticated requests
+- GitHub Pages serves arbitrary JavaScript; the browser executes it like any other web app. Full SPA interactivity (state, dynamic rendering, IndexedDB, WebCrypto, fetch) is available
+- Talks directly to the GitHub REST API via Octokit-rest browser build. GitHub's REST API supports CORS for authenticated requests, so `fetch('https://api.github.com/...')` with the Device Flow token in the `Authorization` header works directly — no proxy required
 - Auth: GitHub OAuth Device Flow against a registered public OAuth App; access token stored in browser IndexedDB
 - Renders UI, performs all reads/writes against the canonical repo and tracked repos, creates issues, polls issue comments for Claude responses
-- No backend; no server-side code
+- No backend; no server-side code. Anything that needs server-side execution (Lambda, scheduled jobs) is out of scope for v0.x
 
 #### 3. User's Claude Interface (out-of-process agent)
 
@@ -350,48 +364,41 @@ Claude's response comment:
 
 #### Repo Cataloging
 
-- Connect to GitHub using a personal access token
+- Authenticate via GitHub OAuth Device Flow (decision 0)
 - Discover and list all repos the token has access to
-- Scan each repo for skill files based on known path conventions
-- Display a catalog: which skills exist in which repos, and what version
+- Scan each repo for skills, AGENTS.md fragments, ADRs, and retrospective sources (per decisions 5, 11, 12, 9)
+- Display a catalog: which entries exist in which repos, and the lineage / provenance status of each
 
 #### Drift Detection
 
-- Compare each repo’s copy of a skill against the canonical version
-- Flag repos where the skill has diverged
-- Show a human-readable summary of what changed (not line-by-line diff — semantic summary via Claude)
+- Compare each repo's copy of an entry against the canonical version
+- Flag repos where the entry has diverged
+- For semantic summaries (not line-by-line diff), open a `task:drift-summary` issue per decision 16 and surface Claude's response in the UI
 
 #### Manifest Management
 
-- Read and write the master manifest
-- UI to assign skills to repos
+- Read and write the per-repo and master manifests (decision 2)
+- UI to assign skills, AGENTS.md fragments, and ADRs to repos (UC3)
 - UI to set auto-refresh policy per repo
 
-#### Todo Directory Writer
+#### Issue Creator and Response Poller
 
-- Generate structured task files for Claude Code to execute
-- Tasks include: update skill to canonical, reconcile drift, add new skill
-- User runs Claude Code manually against the todo directory
+- Generate structured GitHub issues against the canonical repo per decision 16
+- Each task type has its own label and YAML-frontmatter body schema
+- Poll the issue's comments endpoint for a `claude-result` fenced block; surface the response in the UI; close the issue on `final: true`
+- "Pending issues" panel surfaces queued work so the user knows what to ask Claude to process
 
 #### Skill Reconciliation Workflow
 
-- When drift is detected, user can invoke AI-assisted reconciliation
-- The app sends both versions to Claude with a prompt asking it to:
-  - Explain what changed and why each version might be right
-  - Propose a merged/reconciled version
-  - Ask the user to approve or edit before writing back to canonical
+- When drift is detected, open a `task:reconcile` issue (decision 16) containing every relevant version (canonical, target, history, sibling repos)
+- User drives the conversation with Claude inside the issue; the app waits for `final: true` and applies the agreed result to the canonical entry (with a new lineage record per decision 13)
 
 #### Retrospective Harvester
 
-- Scan every tracked repo for directories whose names contain `retrospect` (case-insensitive)
-- Read retrospective reports inside those directories
-- Use Claude (`claude -p`) to extract three classes of proposals from each report:
-  - Specs for proposed new skills
-  - Proposed modifications to `AGENTS.md` fragments
-  - Proposed Architecture Decision Records
-- For each ADR proposal, inject enough context from the source retrospective that the ADR is independently implementable
-- Write each proposal into the proposal queue in the canonical repo, tagged with source repo, source retrospective, and harvest date
-- Deduplicate against existing queue entries on subsequent harvests
+- See UC7 in `use-cases-spec.md` for the full workflow
+- Discovers structured Mode B output (`retrospective/` tree from the `self-retrospective` skill) and free-form retrospectives across tracked repos
+- Structured sources are parsed directly with no Claude work for skill / fragment proposals; ADR derivation and free-form harvesting open `task:extract-adrs` / `task:harvest-retrospective` issues per decision 16
+- Writes proposals into the proposal queue with full provenance; deduplicates against prior harvests
 
 #### Proposal Queue
 
@@ -479,19 +486,17 @@ This phase is not part of v0.x and does not affect the SPA architecture.
 
 ## SESSION CONTEXT (for Claude Code handoff)
 
-> **Note (May 2026 update):** The bullets below capture the original Claude.ai session that produced the first draft of this spec. Several items have since been clarified or superseded — see the **Architecture clarification** note at the top of this document, and decisions 0 and 16. In particular: the app no longer hosts Claude (no `claude -p`, no Agent SDK), and Electron is replaced by an SPA on GitHub Pages because of the iPad requirement.
+> **Note:** These bullets capture the original Claude.ai session that produced the first draft of this spec. The architecture has since been clarified by decisions 0 and 16. The still-relevant items are flagged below; the rest are marked *(superseded)*.
 
-This spec was created in a Claude.ai chat session. The following were established during that conversation:
-
-- The user has a **Claude Max subscription** (likely 20x tier) and does **not** have a separate Anthropic API key
-- The user is building for **Windows** using **Electron**
-- The user confirmed the **June 15, 2026 Agent SDK credit** announcement from Anthropic’s official support page: `https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan`
-- The intended build strategy is: **build with `claude -p` now, migrate to Agent SDK on June 15**
-- Claude Code CLI non-interactive mode (`claude -p`) is the correct bridge mechanism — it uses Max subscription OAuth credentials, not an API key
-- Using Playwright to automate Claude.ai was explicitly ruled out (ToS violation)
-- Using Claude Cowork was ruled out (not programmable)
-- There is currently **no IPC mechanism** to inject prompts into a running interactive Claude Code session — this is a known feature gap as of May 2026
-- The GitHub MCP connector was **not connected** in Claude.ai at time of writing — user may want to connect it for future sessions
+- The user has a **Claude Max subscription** (likely 20x tier) and does **not** have a separate Anthropic API key — *still relevant context; informs the issue-protocol design since the app does not need Claude API access*
+- *(superseded)* The user is building for Windows using Electron — **now: SPA on GitHub Pages, browser targets (decision 0)**
+- *(superseded)* The user confirmed the June 15, 2026 Agent SDK credit announcement — *Agent SDK is not part of v0.x (decision 16 replaces it with the issue protocol); may return in a future re-architecture per decision 0's "Future re-architecture" notes*
+- *(superseded)* The intended build strategy is: build with `claude -p` now, migrate to Agent SDK on June 15 — **now: app never invokes Claude; user's Claude session processes labeled issues (decision 16)**
+- *(superseded)* Claude Code CLI non-interactive mode (`claude -p`) is the correct bridge mechanism — **same supersession**
+- Using Playwright to automate Claude.ai was explicitly ruled out (ToS violation) — *still relevant constraint*
+- Using Claude Cowork was ruled out (not programmable) — *still relevant context*
+- *(superseded as a concern)* There is currently no IPC mechanism to inject prompts into a running interactive Claude Code session — *not a problem under decision 16, since the user manually drives Claude to process the queue*
+- The GitHub MCP connector was **not connected** in Claude.ai at time of writing — *still relevant; connecting it makes decision 16's workflow much smoother for iPad use*
 
 -----
 
