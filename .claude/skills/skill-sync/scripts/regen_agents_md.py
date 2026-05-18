@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Regenerate AGENTS.md from the agents-md directory.
 
-See ai/skill-management-v1.md §7.2.1 (step 5) and §9.
+See resources/skill-management-v1.md §7.2.1 (step 5) and §9.
 
 Rules:
   - Read every .md file in the agents-md directory (excluding the

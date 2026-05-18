@@ -5,7 +5,7 @@ Each skill ships its own copy so it remains standalone when distributed
 into a consumer repo where the registry skill is not present. Behavior
 MUST match the registry's canonical_json.py byte-for-byte.
 
-Rules (see ai/skill-management-v1.md §6):
+Rules (see resources/skill-management-v1.md §6):
   - Object keys sorted recursively (lexicographic). Same axis as `jq -S`.
   - Arrays at known JSON-pointer paths are sorted per spec; others are
     left as-is.

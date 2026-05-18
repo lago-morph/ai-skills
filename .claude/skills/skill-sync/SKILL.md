@@ -8,7 +8,7 @@ description: Sync subscribed skills, ADRs, and agent-md instructions from the ai
 Sync subscribed artifacts from the `lago-morph/ai-skills` registry into
 the current repository, and regenerate `AGENTS.md` and `CLAUDE.md`.
 
-Read `ai/skill-management-v1.md` §7.2 in the registry repo for the
+Read `resources/skill-management-v1.md` §7.2 in the registry repo for the
 detailed design. This SKILL.md is the operating manual.
 
 ## When to use

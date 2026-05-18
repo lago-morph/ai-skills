@@ -2,7 +2,7 @@
 """Sync subscribed artifacts from the ai-skills registry into the
 current (consumer) repository.
 
-See ai/skill-management-v1.md §7.2.
+See resources/skill-management-v1.md §7.2.
 
 CLI:
     skill_sync.py [--config PATH] [--no-clone] [--registry-clone PATH]
