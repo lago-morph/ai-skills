@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Sweep tracked repos for new artifact candidates.
 
-See ai/skill-management-v1.md §7.1.1 — `sweep` mode.
+See resources/skill-management-v1.md §7.1.1 — `sweep` mode.
 
 For each repo in `registry-config.json`:
   1. git clone --depth 1 into /tmp/skill-sweep-<run-id>/<org>/<repo>

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Interactive walkthrough of `/incoming/` reports.
 
-See ai/skill-management-v1.md §7.1.1 — `process-incoming` mode.
+See resources/skill-management-v1.md §7.1.1 — `process-incoming` mode.
 
 This is the only script in the registry that needs human-in-the-loop
 interaction AND that performs ledger / artifact writes. It is invoked

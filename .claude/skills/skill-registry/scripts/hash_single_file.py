@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Single-file artifact hash.
 
-See ai/skill-management-v1.md §3.2.
+See resources/skill-management-v1.md §3.2.
 
 Strip first line, sha256 the remainder.
 

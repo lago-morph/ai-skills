@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Reconcile incoming artifacts.
 
-See ai/skill-management-v1.md §7.1.1 — `reconcile` mode.
+See resources/skill-management-v1.md §7.1.1 — `reconcile` mode.
 
 For every artifact in /incoming/<org>/<repo>/<type>/<name>(.md|/):
     1. Find the corresponding registry artifact, if any (by name).

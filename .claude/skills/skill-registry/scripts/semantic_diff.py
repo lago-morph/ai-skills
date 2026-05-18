@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the markdown semantic-diff report for one incoming artifact.
 
-See ai/skill-management-v1.md §7.1.1 — `semantic-diff` mode.
+See resources/skill-management-v1.md §7.1.1 — `semantic-diff` mode.
 
 The report is a deterministic, AI-friendly markdown document. It contains:
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Skill directory hash (Option A).
 
-See ai/skill-management-v1.md §3.1.
+See resources/skill-management-v1.md §3.1.
 
 Algorithm:
   1. Walk the directory tree.
