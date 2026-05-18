@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Canonical JSON dumper used by every v1 script that writes JSON.
 
-Rules (see ai/skill-management-v1.md §6):
+Rules (see resources/skill-management-v1.md §6):
   - Object keys sorted recursively (lexicographic). Same axis as `jq -S`.
   - Arrays at known JSON-pointer paths are sorted per spec; others are
     left as-is (preserves semantic order in `repos`, `subscriptions.*`,

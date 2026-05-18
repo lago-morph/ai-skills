@@ -6,8 +6,9 @@ description: Manage the ai-skills registry. Sweeps tracked external repositories
 # Skill: skill-registry
 
 Manages the registry repository (`lago-morph/ai-skills`). Implements the
-v1 system described in `ai/skill-management-v1.md`. Read that document
-first if you have not already — it is the source of truth.
+v1 system described in `resources/skill-management-v1.md` (a copy of the
+spec, shipped with the skill so it remains self-contained). Read that
+document first if you have not already — it is the source of truth.
 
 ## When to use
 
@@ -113,8 +114,8 @@ each other. Drive it like this:
       for replace/merge.
    d. For `replace` and `merge`, also decide whether to refresh the
       ledger `description` field. Apply the rule from
-      ai/skill-management-v1.md §5.3: keep current description if still
-      accurate; rewrite only when it would otherwise become stale.
+      `resources/skill-management-v1.md` §5.3: keep current description
+      if still accurate; rewrite only when it would otherwise become stale.
    e. Call `apply_disposition(repo_root, item, "<choice>", ...)`. This
       installs the artifact, updates the ledger atomically, and removes
       both the `/incoming/` entry and the semantic-diff report.
@@ -164,6 +165,7 @@ Schema: `resources/schemas/registry-config.schema.json`.
 ```
 SKILL.md                          this file
 resources/
+  skill-management-v1.md          v1 spec (canonical in-skill copy)
   registry-config.json            user config (hash-excluded)
   registry-config-template.json   default template
   schemas/

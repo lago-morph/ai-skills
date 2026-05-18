@@ -2,7 +2,7 @@
 """Install / refresh the skill-registry's GitHub Action workflows.
 
 Run on every invocation of the skill (self-bootstrap, see
-ai/skill-management-v1.md §8).
+resources/skill-management-v1.md §8).
 
 Behavior:
   - For each `.yml` template in `resources/_workflows/`:
