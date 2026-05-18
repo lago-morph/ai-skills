@@ -1,3 +1,4 @@
+{"name":"architecture-backlog-spec","origin":"github.com/lago-morph/ai-skills","content_hash":"c48706b22a2cc12028c6ff79e178c10bc43addd28940913e9505e23ad6696157","version":"0.1.0","state":"live","implemented_as":null,"merged_into":null}
 # architecture-backlog-spec
 
 A reusable structure and discipline for maintaining a parallel "preserved ideas" document that lives alongside an architecture overview. Apply when the architecture work is non-trivial and decisions are being made faster than they can be fully integrated, when alternatives are being considered seriously, and when the cost of losing context is high.

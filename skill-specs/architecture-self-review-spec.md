@@ -1,3 +1,4 @@
+{"name":"architecture-self-review-spec","origin":"github.com/lago-morph/ai-skills","content_hash":"c101f9f6a10bd7c47ee0851ea012b4898809cd722da0827e131d19706b889312","version":"0.1.0","state":"live","implemented_as":null,"merged_into":null}
 # architecture-self-review-spec
 
 A discipline for critically reviewing your own architecture document before the user has to. Apply when an architecture document is at a milestone (end of a major work session, before sign-off, before handoff to implementers) and you have the chance to find gaps before they do.

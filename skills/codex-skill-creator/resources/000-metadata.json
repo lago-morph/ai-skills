@@ -1,0 +1,12 @@
+{
+  "content_hash": "07eecbc32fb4ab4de1aef7aa07417ff425ae9b572426303de57f089818b760a4",
+  "hash_exclude": [
+    "resources/000-metadata.json"
+  ],
+  "implemented_as": null,
+  "merged_into": null,
+  "name": "codex-skill-creator",
+  "origin": "github.com/lago-morph/ai-skills",
+  "state": "live",
+  "version": "0.1.0"
+}

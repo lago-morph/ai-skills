@@ -1,0 +1,12 @@
+{
+  "content_hash": "3e876f2ece6208ef8821e79e4fce4d96b344bb93f2dee15c93b9cb6507db80c3",
+  "hash_exclude": [
+    "resources/000-metadata.json"
+  ],
+  "implemented_as": null,
+  "merged_into": null,
+  "name": "subagent-prompting",
+  "origin": "github.com/lago-morph/ai-skills",
+  "state": "live",
+  "version": "0.1.0"
+}

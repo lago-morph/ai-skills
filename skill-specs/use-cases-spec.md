@@ -1,3 +1,4 @@
+{"name":"use-cases-spec","origin":"github.com/lago-morph/ai-skills","content_hash":"3f638e20def9f1422e916b505e4eed4068404e0d5414ae8d3aba4d13cc99f71e","version":"0.1.0","state":"live","implemented_as":null,"merged_into":null}
 # Skill Registry Manager — Use Cases
 
 ## Status: Pre-Implementation

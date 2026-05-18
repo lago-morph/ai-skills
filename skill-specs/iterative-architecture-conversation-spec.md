@@ -1,3 +1,4 @@
+{"name":"iterative-architecture-conversation-spec","origin":"github.com/lago-morph/ai-skills","content_hash":"c40019ac43e9b3babe396baf93f2911addd3f572f23751f791e8ca56c41706e2","version":"0.1.0","state":"live","implemented_as":null,"merged_into":null}
 # iterative-architecture-conversation-spec
 
 Disciplines for collaborative iterative architecture definition over many turns with a user. Apply when the conversation is long, decisions accumulate over many exchanges, and the user is using you as a thinking partner who must respect their direction.

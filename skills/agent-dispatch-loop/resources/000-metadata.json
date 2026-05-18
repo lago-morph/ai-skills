@@ -1,0 +1,12 @@
+{
+  "content_hash": "ca2e88b7dfe641604450d986371cba3a455ffe68814d8a8c723ca1a697d85b9e",
+  "hash_exclude": [
+    "resources/000-metadata.json"
+  ],
+  "implemented_as": null,
+  "merged_into": null,
+  "name": "agent-dispatch-loop",
+  "origin": "github.com/lago-morph/ai-skills",
+  "state": "live",
+  "version": "0.1.0"
+}

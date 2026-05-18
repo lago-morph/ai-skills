@@ -1,3 +1,4 @@
+{"name":"skill-manager-spec","origin":"github.com/lago-morph/ai-skills","content_hash":"24c8d242311f19a63bd8d70fa9820bd7f53fe2044ac23a165cfb1a84c3acc50f","version":"0.1.0","state":"live","implemented_as":null,"merged_into":null}
 # Skill Registry Manager — Project Specification
 
 ## Status: Pre-Implementation
