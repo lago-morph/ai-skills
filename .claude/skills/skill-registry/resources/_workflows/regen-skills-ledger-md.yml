@@ -1,0 +1,41 @@
+name: Regenerate skills/000-ledger.md
+
+# Fires when skills/000-ledger.json changes on main. Validates, normalizes
+# the JSON canonically, re-renders 000-ledger.md, commits with [skip ci] so
+# the workflow doesn't loop.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/000-ledger.json'
+
+permissions:
+  contents: write
+
+jobs:
+  regen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install deps
+        run: pip install jsonschema
+      - name: Render ledger
+        run: python __SKILL_PATH__/scripts/render_ledger.py skills/000-ledger.json
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add skills/000-ledger.json skills/000-ledger.md
+          if git diff --quiet --cached; then
+            echo "no changes"
+          else
+            git commit -m "auto: regenerate skills/000-ledger.md [skip ci]"
+            git push
+          fi
