@@ -1,3 +1,4 @@
+{"name":"architecture-overview-spec","origin":"github.com/lago-morph/ai-skills","content_hash":"6009b61f4a659cdad0c79abbfa678a5156b5da0a631517f0dd98d88a296bde1c","version":"0.1.0","state":"live","implemented_as":null,"merged_into":null}
 # architecture-overview-spec
 
 A reusable structure for producing a comprehensive architecture overview document for a software platform. Apply when asked to write or revise an architecture document that needs to serve as a starting point for new technical readers and a reference for ongoing decision-making.

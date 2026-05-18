@@ -1,0 +1,12 @@
+{
+  "content_hash": "978d4a5d04c14ab3fa4565ef40c39da72949ad303da82736b8ce819d8c6bb4b6",
+  "hash_exclude": [
+    "resources/000-metadata.json"
+  ],
+  "implemented_as": null,
+  "merged_into": null,
+  "name": "parallel-subagent-fanout",
+  "origin": "github.com/lago-morph/ai-skills",
+  "state": "live",
+  "version": "0.1.0"
+}

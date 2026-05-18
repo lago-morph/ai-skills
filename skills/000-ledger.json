@@ -1,0 +1,90 @@
+{
+  "artifact_type": "skills",
+  "items": {
+    "agent-dispatch-loop": {
+      "current_hash": "ca2e88b7dfe641604450d986371cba3a455ffe68814d8a8c723ca1a697d85b9e",
+      "current_version": "0.1.0",
+      "description": "An orchestration pattern for fanning a task out across many subagents and consolidating their results. Use when the workload can be parallelized across independent agents and the parent agent needs a single combined answer.",
+      "discarded_hashes": [],
+      "implemented_as": null,
+      "merged_into": null,
+      "name_clash": [],
+      "state": "live",
+      "versions": [
+        {
+          "commit": "bootstrap",
+          "hash": "ca2e88b7dfe641604450d986371cba3a455ffe68814d8a8c723ca1a697d85b9e",
+          "version": "0.1.0"
+        }
+      ]
+    },
+    "codex-skill-creator": {
+      "current_hash": "07eecbc32fb4ab4de1aef7aa07417ff425ae9b572426303de57f089818b760a4",
+      "current_version": "0.1.0",
+      "description": "A skill-creation pipeline tuned to the codex harness (OpenAI agents). Mirrors the upstream Anthropic skill-creator structure but targets the codex YAML/file conventions.",
+      "discarded_hashes": [],
+      "implemented_as": null,
+      "merged_into": null,
+      "name_clash": [],
+      "state": "live",
+      "versions": [
+        {
+          "commit": "bootstrap",
+          "hash": "07eecbc32fb4ab4de1aef7aa07417ff425ae9b572426303de57f089818b760a4",
+          "version": "0.1.0"
+        }
+      ]
+    },
+    "parallel-subagent-fanout": {
+      "current_hash": "978d4a5d04c14ab3fa4565ef40c39da72949ad303da82736b8ce819d8c6bb4b6",
+      "current_version": "0.1.0",
+      "description": "Discipline for issuing many parallel subagent calls efficiently without blocking on the slowest. Covers prompt design, result merging, and failure handling.",
+      "discarded_hashes": [],
+      "implemented_as": null,
+      "merged_into": null,
+      "name_clash": [],
+      "state": "live",
+      "versions": [
+        {
+          "commit": "bootstrap",
+          "hash": "978d4a5d04c14ab3fa4565ef40c39da72949ad303da82736b8ce819d8c6bb4b6",
+          "version": "0.1.0"
+        }
+      ]
+    },
+    "self-retrospective": {
+      "current_hash": "6bfa009abfb9351686812fdb97dffa5c6126fa712060e75451be8da12c5ad5f6",
+      "current_version": "0.1.0",
+      "description": "Harvest the knowledge accumulated in a session before it is lost to context truncation. Produces a structured retrospective on disk with skill specs, ADR drafts, and per-rule agents-md additions in canonical filename form.",
+      "discarded_hashes": [],
+      "implemented_as": null,
+      "merged_into": null,
+      "name_clash": [],
+      "state": "live",
+      "versions": [
+        {
+          "commit": "bootstrap",
+          "hash": "6bfa009abfb9351686812fdb97dffa5c6126fa712060e75451be8da12c5ad5f6",
+          "version": "0.1.0"
+        }
+      ]
+    },
+    "subagent-prompting": {
+      "current_hash": "3e876f2ece6208ef8821e79e4fce4d96b344bb93f2dee15c93b9cb6507db80c3",
+      "current_version": "0.1.0",
+      "description": "How to write prompts for subagents so they can pick up the task cold. Covers context handoff, scope framing, expected output format, and common failure modes.",
+      "discarded_hashes": [],
+      "implemented_as": null,
+      "merged_into": null,
+      "name_clash": [],
+      "state": "live",
+      "versions": [
+        {
+          "commit": "bootstrap",
+          "hash": "3e876f2ece6208ef8821e79e4fce4d96b344bb93f2dee15c93b9cb6507db80c3",
+          "version": "0.1.0"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "content_hash": "6bfa009abfb9351686812fdb97dffa5c6126fa712060e75451be8da12c5ad5f6",
+  "hash_exclude": [
+    "resources/000-metadata.json"
+  ],
+  "implemented_as": null,
+  "merged_into": null,
+  "name": "self-retrospective",
+  "origin": "github.com/lago-morph/ai-skills",
+  "state": "live",
+  "version": "0.1.0"
+}
