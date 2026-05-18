@@ -1,0 +1,17 @@
+{
+  "registry": { "repo": "lago-morph/ai-skills", "ref": "main" },
+  "paths": {
+    "skills":    ".claude/skills",
+    "agents_md": ".claude/agents-md",
+    "adrs":      "ai/adr"
+  },
+  "agents_md_output": {
+    "agents_md": "AGENTS.md",
+    "claude_md": "CLAUDE.md"
+  },
+  "subscriptions": {
+    "skills":    [],
+    "agents_md": [],
+    "adrs":      []
+  }
+}

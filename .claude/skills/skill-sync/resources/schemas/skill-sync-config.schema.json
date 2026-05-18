@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lago-morph/ai-skills/schemas/skill-sync-config.schema.json",
+  "title": "skill-sync config",
+  "type": "object",
+  "required": ["registry", "paths", "agents_md_output", "subscriptions"],
+  "additionalProperties": false,
+  "properties": {
+    "registry": {
+      "type": "object",
+      "required": ["repo", "ref"],
+      "additionalProperties": false,
+      "properties": {
+        "repo": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.\\-]*\\/[A-Za-z0-9][A-Za-z0-9_.\\-]*$"
+        },
+        "ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "paths": {
+      "type": "object",
+      "required": ["skills", "agents_md", "adrs"],
+      "additionalProperties": false,
+      "properties": {
+        "skills":    { "type": "string", "minLength": 1 },
+        "agents_md": { "type": "string", "minLength": 1 },
+        "adrs":      { "type": "string", "minLength": 1 }
+      }
+    },
+    "agents_md_output": {
+      "type": "object",
+      "required": ["agents_md", "claude_md"],
+      "additionalProperties": false,
+      "properties": {
+        "agents_md": { "type": "string", "minLength": 1 },
+        "claude_md": { "type": "string", "minLength": 1 }
+      }
+    },
+    "subscriptions": {
+      "type": "object",
+      "required": ["skills", "agents_md", "adrs"],
+      "additionalProperties": false,
+      "properties": {
+        "skills":    { "$ref": "#/$defs/subscription_list" },
+        "agents_md": { "$ref": "#/$defs/subscription_list" },
+        "adrs":      { "$ref": "#/$defs/subscription_list" }
+      }
+    }
+  },
+  "$defs": {
+    "subscription_list": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "version"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+          },
+          "version": {
+            "oneOf": [
+              { "const": "latest" },
+              {
+                "type": "string",
+                "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.\\-]+)?$"
+              }
+            ]
+          }
+        }
+      },
+      "uniqueItems": true
+    }
+  }
+}
