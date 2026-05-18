@@ -1,0 +1,30 @@
+name: skill-registry tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '__SKILL_PATH__/scripts/**'
+      - '__SKILL_PATH__/tests/**'
+      - '__SKILL_PATH__/resources/schemas/**'
+  pull_request:
+    paths:
+      - '__SKILL_PATH__/scripts/**'
+      - '__SKILL_PATH__/tests/**'
+      - '__SKILL_PATH__/resources/schemas/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install deps
+        run: pip install pytest jsonschema
+      - name: Verify jq present
+        run: jq --version
+      - name: Run tests
+        run: pytest __SKILL_PATH__/tests/ -v

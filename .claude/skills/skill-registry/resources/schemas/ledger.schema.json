@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lago-morph/ai-skills/schemas/ledger.schema.json",
+  "title": "Ledger",
+  "type": "object",
+  "required": ["artifact_type", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "artifact_type": {
+      "type": "string",
+      "enum": ["skills", "skill-specs", "adrs", "agents-md"]
+    },
+    "items": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/item" },
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$" }
+    }
+  },
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.\\-]+)?$"
+    },
+    "hex64": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "kebab": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+    },
+    "item": {
+      "type": "object",
+      "required": [
+        "current_version",
+        "current_hash",
+        "state",
+        "description",
+        "versions"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "current_version": { "$ref": "#/$defs/semver" },
+        "current_hash":    { "$ref": "#/$defs/hex64" },
+        "state": {
+          "type": "string",
+          "enum": ["live", "deprecated", "merged", "implemented"]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "implemented_as": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/kebab" }
+          ]
+        },
+        "merged_into": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/kebab" }
+          ]
+        },
+        "name_clash": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/kebab" },
+          "uniqueItems": true
+        },
+        "versions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["version", "hash", "commit"],
+            "additionalProperties": false,
+            "properties": {
+              "version": { "$ref": "#/$defs/semver" },
+              "hash":    { "$ref": "#/$defs/hex64" },
+              "commit":  {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "discarded_hashes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hex64" },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

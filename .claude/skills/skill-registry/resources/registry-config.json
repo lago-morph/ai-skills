@@ -1,0 +1,16 @@
+{
+  "defaults": {
+    "skills":      [".claude/skills/*/"],
+    "agents_md":   [".claude/agents-md/*.md", "retrospective/*/AGENTS-MD-*.md"],
+    "adrs":        ["ai/adr/*.md", "retrospective/*/ADR-*.md"],
+    "skill_specs": ["retrospective/*/SKILL-SPEC-*.md"]
+  },
+  "repos": [
+    {
+      "repo": "lago-morph/ai-skills"
+    },
+    {
+      "repo": "lago-morph/software-factory"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lago-morph/ai-skills/schemas/single-file-metadata.schema.json",
+  "title": "Single-file artifact metadata (first line)",
+  "type": "object",
+  "required": [
+    "name",
+    "origin",
+    "content_hash",
+    "version",
+    "state"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+    },
+    "origin": {
+      "type": "string",
+      "minLength": 1
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.\\-]+)?$"
+    },
+    "state": {
+      "type": "string",
+      "enum": ["live", "deprecated", "merged", "implemented"]
+    },
+    "implemented_as": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$" }
+      ]
+    },
+    "merged_into": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$" }
+      ]
+    }
+  }
+}

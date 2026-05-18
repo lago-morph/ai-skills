@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lago-morph/ai-skills/schemas/registry-config.schema.json",
+  "title": "skill-registry config",
+  "type": "object",
+  "required": ["defaults", "repos"],
+  "additionalProperties": false,
+  "properties": {
+    "defaults": { "$ref": "#/$defs/paths_block" },
+    "repos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["repo"],
+        "additionalProperties": false,
+        "properties": {
+          "repo": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.\\-]*\\/[A-Za-z0-9][A-Za-z0-9_.\\-]*$"
+          },
+          "paths": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "skills":      { "$ref": "#/$defs/path_list" },
+              "agents_md":   { "$ref": "#/$defs/path_list" },
+              "adrs":        { "$ref": "#/$defs/path_list" },
+              "skill_specs": { "$ref": "#/$defs/path_list" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "path_list": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "paths_block": {
+      "type": "object",
+      "required": ["skills", "agents_md", "adrs", "skill_specs"],
+      "additionalProperties": false,
+      "properties": {
+        "skills":      { "$ref": "#/$defs/path_list" },
+        "agents_md":   { "$ref": "#/$defs/path_list" },
+        "adrs":        { "$ref": "#/$defs/path_list" },
+        "skill_specs": { "$ref": "#/$defs/path_list" }
+      }
+    }
+  }
+}
